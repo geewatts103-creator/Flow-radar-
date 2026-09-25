@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0D1218">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Options Flow Radar</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0D1218;--surface:#151C25;--line:#253041;--ink:#E4E9F0;--muted:#8B96A6;
+  --accent:#7D9BFF;--call:#3CC48C;--call-soft:#123126;--put:#F0766E;--put-soft:#3A1D1C;--warn:#E3A948;--warn-soft:#3A2C12;
+  --mono:ui-monospace,"Roboto Mono",Menlo,monospace;
+  --cond:"Roboto Condensed","Arial Narrow",system-ui,sans-serif;
+  --sans:Roboto,system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.4 var(--sans);padding:0 12px;padding-block:calc(env(safe-area-inset-top,0px) + 10px) calc(env(safe-area-inset-bottom,0px) + 24px)}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+header{display:flex;align-items:center;justify-content:space-between;gap:10px}
+h1{font:700 19px/1.1 var(--cond);margin:0;letter-spacing:.02em}
+.status{display:flex;align-items:center;gap:6px;font:12px var(--mono);color:var(--muted);margin-top:3px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--call)} .dot.err{background:var(--put)} .dot.busy{background:var(--warn)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font:600 13px var(--cond)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.5}
+.hbtns{display:flex;gap:6px}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+.stat span{font:11px var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat.c b{color:var(--call)}.stat.p b{color:var(--put)}
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lbl{font:11px var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.chip{border-radius:999px;padding:4px 10px;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.list{display:flex;flex-direction:column;gap:6px}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:6px 10px}
+.row.hot{border-color:var(--accent)}
+.tk{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tk strong{font:700 18px var(--cond);letter-spacing:.02em}
+.rv{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.rv b{font-size:18px;font-weight:600;color:var(--accent)}
+.rv small{display:block;font:10px var(--cond);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.split{grid-column:1/-1;display:flex;flex-direction:column;gap:3px}
+.bar{height:7px;border-radius:4px;overflow:hidden;display:flex;background:var(--line)}
+.bar i{display:block;height:100%}.bc{background:var(--call)}.bp{background:var(--put)}
+.splitlbl{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.splitlbl .c{color:var(--call)}.splitlbl .p{color:var(--put)}
+.meta{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.meta em{font-style:normal;color:var(--ink)}
+.top{grid-column:1/-1;font:12px var(--mono);color:var(--ink);background:var(--bg);border-radius:6px;padding:5px 8px;overflow-wrap:anywhere}
+.top .k{color:var(--muted)}
+.tag{font:600 10px var(--cond);letter-spacing:.05em;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+.tag.bull{background:var(--call-soft);color:var(--call)}.tag.bear{background:var(--put-soft);color:var(--put)}.tag.risk{background:var(--warn-soft);color:var(--warn)}
+.errrow{grid-column:1/-1;font-size:12px;color:var(--put)}
+.notice{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:8px;padding:10px 12px;font-size:13px}
+.notice strong{display:block;font:600 14px var(--cond);margin-bottom:2px}
+.notice.bad{border-left-color:var(--put)}
+dialog{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:16px;width:min(520px,calc(100vw - 24px))}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.field label{font:600 12px var(--cond);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%}
+.field textarea{min-height:70px;font-family:var(--mono);font-size:13px}
+.hint{font-size:12px;color:var(--muted)}
+.dlgbtns{display:flex;gap:8px;justify-content:flex-end}
+.primary{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+footer{font-size:12px;color:var(--muted);line-height:1.5}
+footer p{margin:0 0 6px}
+.compact .top,.compact .meta,.compact footer,.compact .controls{display:none}
+.compact .row{padding:8px 10px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header>
+    <div>
+      <h1>Options Flow Radar</h1>
+      <div class="status"><span class="dot" id="dot"></span><span id="stamp">Starting…</span></div>
+    </div>
+    <div class="hbtns">
+      <button type="button" id="refresh">Refresh</button>
+      <button type="button" id="openSettings" aria-label="Settings">Setup</button>
+    </div>
+  </header>
+
+  <div id="notice" hidden></div>
+
+  <section class="summary" aria-label="Summary">
+    <div class="stat"><b id="sHot">–</b><span>Unusual</span></div>
+    <div class="stat c"><b id="sCall">–</b><span>Call-heavy</span></div>
+    <div class="stat p"><b id="sPut">–</b><span>Put-heavy</span></div>
+  </section>
+
+  <div class="controls" role="group" aria-label="Sort by">
+    <span class="lbl">Sort</span>
+    <button class="chip" type="button" data-sort="score">Unusual</button>
+    <button class="chip" type="button" data-sort="vol">Volume</button>
+    <button class="chip" type="button" data-sort="pc">Put/Call</button>
+    <button class="chip" type="button" data-sort="iv">IV</button>
+    <button class="chip" type="button" id="onlyHot">Unusual only</button>
+  </div>
+
+  <div class="list" id="list"></div>
+
+  <footer>
+    <p><b>Unusual</b> = contracts trading more today than their open interest (min. volume set in Setup). The big number is the highest volume ÷ open interest on any contract. The bar shows calls (green) vs. puts (red).</p>
+    <p><span class="tag bull">Calls</span> put/call below 0.5 · <span class="tag bear">Puts</span> above 1.5 · <span class="tag risk">High-beta</span> meme names or average IV of 75%+.</p>
+    <p id="srcNote"></p>
+  </footer>
+</div>
+
+<dialog id="settings">
+  <form method="dialog" id="setForm">
+    <div class="field">
+      <label for="source">Data source</label>
+      <select id="source">
+        <option value="tradier">Tradier (real-time, free brokerage account)</option>
+        <option value="polygon">Polygon / Massive (real-time plan)</option>
+      </select>
+      <span class="hint" id="srcHint"></span>
+    </div>
+    <div class="field" id="keyField">
+      <label for="apikey">API key / token</label>
+      <input id="apikey" type="password" autocomplete="off" spellcheck="false">
+      <span class="hint">Saved only on this phone.</span>
+    </div>
+    <div class="field">
+      <label for="tickers">Watchlist</label>
+      <textarea id="tickers" spellcheck="false"></textarea>
+      <span class="hint">Stock symbols separated by spaces or commas. Keep it under about 25 for fast refreshes.</span>
+    </div>
+    <div class="field">
+      <label for="minVol">Minimum contract volume to count as unusual</label>
+      <input id="minVol" type="number" min="1" step="50" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label for="interval">Auto-refresh</label>
+      <select id="interval">
+        <option value="0">Off</option><option value="2">Every 2 min</option><option value="5">Every 5 min</option><option value="15">Every 15 min</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="compact">Layout</label>
+      <select id="compact"><option value="0">Full</option><option value="1">Compact (for small widgets)</option></select>
+    </div>
+    <div class="dlgbtns">
+      <button type="button" id="cancelSet">Cancel</button>
+      <button type="submit" class="primary" id="saveSet">Save and scan</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function(){
+  "use strict";
+  var DEFAULTS = {
+    source:"tradier", apikey:"",
+    tickers:"AAPL MSFT NVDA AMZN META GOOGL TSLA AMD AVGO MU QCOM DELL COST JPM NFLX PYPL CRM ORCL",
+    minVol:500, interval:5, compact:0, sort:"score", onlyHot:false
+  };
+  var SOURCES_OK = {tradier:1, polygon:1};
+  var MEME = {GME:1,AMC:1,MARA:1,MSTR:1,SMCI:1,RIOT:1,DJT:1,CVNA:1,UPST:1,HOOD:0};
+  var S = load();
+  var rows = [], timer = null, running = false;
+  var $ = function(id){return document.getElementById(id);};
+
+  function load(){
+    var s = {}; try{ s = JSON.parse(localStorage.getItem("ofr-settings")||"{}")||{}; }catch(e){}
+    var o = {}; for(var k in DEFAULTS) o[k] = (k in s) ? s[k] : DEFAULTS[k]; if(!SOURCES_OK[o.source]) o.source = DEFAULTS.source; return o;
+  }
+  function save(){ try{ localStorage.setItem("ofr-settings", JSON.stringify(S)); }catch(e){} }
+  function tickers(){ return S.tickers.toUpperCase().split(/[\s,;]+/).filter(function(t){return /^[A-Z.\-]{1,6}$/.test(t);}).filter(function(t,i,a){return a.indexOf(t)===i;}); }
+
+  function big(n){ if(n==null||!isFinite(n)) return "–"; var a=Math.abs(n);
+    if(a>=1e6) return (n/1e6).toFixed(2)+"M"; if(a>=1e3) return (n/1e3).toFixed(a>=1e5?0:1)+"K"; return String(Math.round(n)); }
+  function fmtExp(d){ // yyyy-mm-dd -> M/D
+    var p = d.split("-"); return (+p[1])+"/"+(+p[2]); }
+
+  // ---------- normalized contract: {type:"C"|"P", strike, exp:"yyyy-mm-dd", vol, oi, iv, last}
+  function withTimeout(ms){ var c = new AbortController(); setTimeout(function(){c.abort();}, ms); return c.signal; }
+  function getJSON(url, headers){
+    return fetch(url, {headers:headers||{}, signal:withTimeout(20000)}).then(function(r){
+      if(r.status===401||r.status===403) throw {kind:"auth", msg:"The data source rejected the API key (HTTP "+r.status+")."};
+      if(r.status===429) throw {kind:"rate", msg:"Too many requests. Slow the auto-refresh or shorten the watchlist."};
+      if(r.status===404) throw {kind:"nf", msg:"No options data for this symbol."};
+      if(!r.ok) throw {kind:"http", msg:"The data source answered HTTP "+r.status+"."};
+      return r.json();
+    }, function(e){
+      if(e && e.name==="AbortError") throw {kind:"timeout", msg:"Timed out."};
+      throw {kind:"network", msg:"Couldn't reach the data source. You may be offline, or this source blocks direct access from browsers."};
+    });
+  }
+
+  var SOURCES = {
+    tradier:{
+      name:"Tradier", needsKey:true,
+      hint:"Real-time with the API token from a Tradier brokerage account (free to open, no minimum). Scans the nearest 4 expirations.",
+      fetch:function(t){
+        var base = "https://api.tradier.com/v1/markets/"; var h = {Authorization:"Bearer "+S.apikey, Accept:"application/json"};
+        var quote = getJSON(base+"quotes?symbols="+encodeURIComponent(t), h).catch(function(){return null;});
+        return getJSON(base+"options/expirations?symbol="+encodeURIComponent(t), h).then(function(j){
+          var ex = j && j.expirations && j.expirations.date; if(!ex) throw {kind:"nf", msg:"No options listed."};
+          if(!Array.isArray(ex)) ex = [ex]; ex = ex.slice(0,4);
+          return Promise.all(ex.map(function(e){ return getJSON(base+"options/chains?symbol="+encodeURIComponent(t)+"&expiration="+e+"&greeks=true", h); }));
+        }).then(function(chains){
+          var out = [];
+          chains.forEach(function(c){ var arr = c && c.options && c.options.option; if(!arr) return; if(!Array.isArray(arr)) arr=[arr];
+            arr.forEach(function(o){ out.push({type:o.option_type==="put"?"P":"C", strike:+o.strike, exp:o.expiration_date,
+              vol:+o.volume||0, oi:+o.open_interest||0, iv:(o.greeks&&+o.greeks.mid_iv)||0, last:+o.last||0}); });
+          });
+          return quote.then(function(q){ var qq = q && q.quotes && q.quotes.quote; if(Array.isArray(qq)) qq=qq[0];
+            return {contracts:out, price: qq ? +qq.last : null, chg: qq && qq.change_percentage!=null ? +qq.change_percentage/100 : null}; });
+        });
+      }
+    },
+    polygon:{
+      name:"Polygon / Massive", needsKey:true,
+      hint:"Real-time only on a Polygon (now Massive) options plan with real-time data; lower plans are 15 minutes delayed. Reads up to 1,000 contracts per symbol.",
+      fetch:function(t){
+        var out = [], price = null, chg = null, pages = 0;
+        function page(url){
+          return getJSON(url + (url.indexOf("apiKey=")<0 ? (url.indexOf("?")<0?"?":"&")+"apiKey="+encodeURIComponent(S.apikey) : "")).then(function(j){
+            (j.results||[]).forEach(function(r){
+              var d = r.details||{}; var ua = r.underlying_asset||{};
+              if(price==null && ua.price!=null) price = +ua.price;
+              out.push({type:d.contract_type==="put"?"P":"C", strike:+d.strike_price, exp:d.expiration_date,
+                vol:(r.day&&+r.day.volume)||0, oi:+r.open_interest||0, iv:+r.implied_volatility||0, last:(r.day&&+r.day.close)||0});
+            });
+            pages++;
+            if(j.next_url && pages<4) return page(j.next_url);
+          });
+        }
+        return page("https://api.polygon.io/v3/snapshot/options/"+encodeURIComponent(t)+"?limit=250").then(function(){ return {contracts:out, price:price, chg:chg}; });
+      }
+    }
+  };
+
+  function analyze(t, res){
+    var cv=0, pv=0, ivSum=0, ivW=0, hot=0, best=null;
+    res.contracts.forEach(function(c){
+      if(c.type==="C") cv+=c.vol; else pv+=c.vol;
+      if(c.iv>0 && c.vol>0){ ivSum+=c.iv*c.vol; ivW+=c.vol; }
+      if(c.vol>=S.minVol && c.vol>c.oi){
+        hot++;
+        var ratio = c.oi>0 ? c.vol/c.oi : c.vol;
+        if(!best || ratio>best.ratio) best = {c:c, ratio:ratio};
+      }
+    });
+    var iv = ivW ? ivSum/ivW : null;
+    return {t:t, calls:cv, puts:pv, vol:cv+pv, pc: cv ? pv/cv : null, iv:iv, hot:hot, best:best,
+      score: best ? best.ratio : 0, price:res.price, chg:res.chg, risk: !!MEME[t] || (iv!=null && iv>=0.75)};
+  }
+
+  function pool(items, n, fn){
+    var i=0, results=new Array(items.length);
+    function next(){ if(i>=items.length) return Promise.resolve(); var k=i++; return fn(items[k]).then(function(r){results[k]=r;}, function(e){results[k]={t:items[k], error:e};}).then(next); }
+    var w=[]; for(var j=0;j<Math.min(n,items.length);j++) w.push(next());
+    return Promise.all(w).then(function(){return results;});
+  }
+
+  function status(kind, text){ $("dot").className="dot"+(kind?" "+kind:""); $("stamp").textContent=text; }
+  function notice(title, body, bad){ var n=$("notice"); n.className="notice"+(bad?" bad":""); n.hidden=false; n.textContent="";
+    var s=document.createElement("strong"); s.textContent=title; n.appendChild(s); n.appendChild(document.createTextNode(body)); }
+  function clearNotice(){ $("notice").hidden=true; }
+
+  function scan(){
+    if(running) return; var src = SOURCES[S.source];
+    if(src.needsKey && !S.apikey){ status("err","Needs setup"); notice("Add your API key", src.name+" needs a key. Tap Setup to add it.", true); return; }
+    var list = tickers(); if(!list.length){ notice("Your watchlist is empty","Tap Setup and add some stock symbols.", true); return; }
+    running = true; $("refresh").disabled = true; status("busy","Scanning "+list.length+" symbols…");
+    pool(list, S.source==="tradier"?3:4, function(t){ return src.fetch(t).then(function(r){ return analyze(t,r); }); }).then(function(res){
+      rows = res; running=false; $("refresh").disabled=false;
+      var errs = res.filter(function(r){return r.error;});
+      if(errs.length===res.length){
+        var e = errs[0].error||{}; status("err","Scan failed");
+        if(e.kind==="auth") notice("API key not accepted", e.msg+" Check it in Setup.", true);
+        else if(e.kind==="network") notice("Can't reach "+src.name, e.msg+" Try another source in Setup.", true);
+        else notice("Scan failed", e.msg||"Try again in a minute.", true);
+      } else {
+        if(errs.length) notice(errs.length+" symbol"+(errs.length>1?"s":"")+" didn't load", "Shown at the bottom of the list. The rest are up to date.", false); else clearNotice();
+        status("live","Updated "+new Date().toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})+" · "+src.name);
+      }
+      render();
+    });
+  }
+
+  function render(){
+    var list = $("list"); list.textContent="";
+    var ok = rows.filter(function(r){return !r.error;});
+    $("sHot").textContent = ok.filter(function(r){return r.hot>0;}).length;
+    $("sCall").textContent = ok.filter(function(r){return r.pc!=null&&r.pc<0.5;}).length;
+    $("sPut").textContent = ok.filter(function(r){return r.pc!=null&&r.pc>1.5;}).length;
+    var show = ok.slice(); if(S.onlyHot) show = show.filter(function(r){return r.hot>0;});
+    var k = S.sort; show.sort(function(a,b){ var av=a[k]==null?-1:a[k], bv=b[k]==null?-1:b[k]; return bv-av; });
+    if(!show.length && ok.length){ var n=document.createElement("div"); n.className="notice"; n.textContent="Nothing unusual on your watchlist right now."; list.appendChild(n); }
+    show.forEach(function(r){
+      var el=document.createElement("article"); el.className="row"+(r.hot?" hot":"");
+      var tot=r.calls+r.puts, cp= tot? r.calls/tot*100 : 50;
+      var tags=[]; if(r.pc!=null&&r.pc<0.5) tags.push('<span class="tag bull">Calls</span>'); if(r.pc!=null&&r.pc>1.5) tags.push('<span class="tag bear">Puts</span>'); if(r.risk) tags.push('<span class="tag risk">High-beta</span>');
+      var chg = r.chg!=null ? '<span style="color:var(--'+(r.chg>=0?'call':'put')+')">'+(r.chg>=0?'+':'')+(r.chg*100).toFixed(2)+'%</span>' : '';
+      var top = r.best ? '<div class="top"><span class="k">Top:</span> '+r.best.c.strike+(r.best.c.type)+' '+fmtExp(r.best.c.exp)+' · '+big(r.best.c.vol)+' vol vs '+big(r.best.c.oi)+' OI'+(r.best.c.last? ' · $'+r.best.c.last.toFixed(2):'')+'</div>' : '';
+      el.innerHTML='<div class="tk"><strong></strong>'+tags.join("")+'</div>'+
+        '<div class="rv"><b>'+(r.best? (r.best.ratio>=100? Math.round(r.best.ratio): r.best.ratio.toFixed(1))+'×':'–')+'</b><small>'+r.hot+' unusual</small></div>'+
+        '<div class="split"><div class="bar"><i class="bc" style="width:'+cp.toFixed(1)+'%"></i><i class="bp" style="width:'+(100-cp).toFixed(1)+'%"></i></div>'+
+        '<div class="splitlbl"><span class="c">C '+big(r.calls)+'</span><span>P/C '+(r.pc!=null?(r.pc>=10?r.pc.toFixed(0):r.pc.toFixed(2)):'–')+'</span><span class="p">P '+big(r.puts)+'</span></div></div>'+
+        '<div class="meta">'+(r.price!=null?'<span><em>$'+r.price.toFixed(2)+'</em></span>':'')+chg+'<span>IV '+(r.iv!=null?(r.iv*100).toFixed(0)+'%':'–')+'</span><span>'+big(r.vol)+' contracts</span></div>'+top;
+      el.querySelector("strong").textContent=r.t; list.appendChild(el);
+    });
+    rows.filter(function(r){return r.error;}).forEach(function(r){
+      var el=document.createElement("article"); el.className="row";
+      el.innerHTML='<div class="tk"><strong></strong></div><div></div><div class="errrow"></div>';
+      el.querySelector("strong").textContent=r.t; el.querySelector(".errrow").textContent=(r.error&&r.error.msg)||"Didn't load."; list.appendChild(el);
+    });
+  }
+
+  function applyUI(){
+    document.querySelectorAll("[data-sort]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.sort===S.sort)); });
+    $("onlyHot").setAttribute("aria-pressed", String(!!S.onlyHot));
+    document.body.classList.toggle("compact", +S.compact===1);
+    $("srcNote").textContent = "Source: "+SOURCES[S.source].name+". "+SOURCES[S.source].hint;
+    if(timer){ clearInterval(timer); timer=null; }
+    if(+S.interval>0) timer = setInterval(function(){ if(!document.hidden) scan(); }, S.interval*60000);
+  }
+
+  // settings dialog
+  function syncKeyField(){ var src=SOURCES[$("source").value]; $("keyField").hidden=!src.needsKey; $("srcHint").textContent=src.hint; }
+  $("openSettings").addEventListener("click", function(){
+    $("source").value=S.source; $("apikey").value=S.apikey; $("tickers").value=S.tickers; $("minVol").value=S.minVol;
+    $("interval").value=String(S.interval); $("compact").value=String(S.compact); syncKeyField();
+    if($("settings").showModal) $("settings").showModal(); else $("settings").setAttribute("open","");
+  });
+  $("source").addEventListener("change", syncKeyField);
+  $("cancelSet").addEventListener("click", function(){ $("settings").close(); });
+  $("setForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    S.source=$("source").value; S.apikey=$("apikey").value.trim(); S.tickers=$("tickers").value;
+    S.minVol=Math.max(1, parseInt($("minVol").value,10)||DEFAULTS.minVol); S.interval=+$("interval").value; S.compact=+$("compact").value;
+    save(); $("settings").close(); applyUI(); scan();
+  });
+
+  document.querySelectorAll("[data-sort]").forEach(function(b){ b.addEventListener("click", function(){ S.sort=b.dataset.sort; save(); applyUI(); render(); }); });
+  $("onlyHot").addEventListener("click", function(){ S.onlyHot=!S.onlyHot; save(); applyUI(); render(); });
+  $("refresh").addEventListener("click", scan);
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden && rows.length && +S.interval>0) scan(); });
+
+  if("serviceWorker" in navigator && location.protocol==="https:"){ navigator.serviceWorker.register("sw.js").catch(function(){}); }
+  if(!S.apikey){ status("err","Needs setup"); notice("Connect a real-time data source","Tap Setup, choose Tradier and paste your API token.", true); applyUI(); }
+  else { applyUI(); scan(); }
+})();
+</script>
+</body>
+</html>
